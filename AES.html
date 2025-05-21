@@ -1,0 +1,65 @@
+!DOCTYPE html>
+<html>
+<head>
+  <title>AES Encrypt/Decrypt</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    input, select, button { margin: 10px 0; padding: 10px; width: 100%; }
+  </style>
+</head>
+<body>
+  <h2>AES File Encrypt/Decrypt</h2>
+
+  <select id="mode">
+    <option value="encrypt">Mã hóa</option>
+    <option value="decrypt">Giải mã</option>
+  </select>
+
+  <input type="file" id="fileInput" />
+  <input type="password" id="keyInput" placeholder="Nhập mã khóa..." />
+  <button onclick="processFile()">Xử lý</button>
+
+  <a id="downloadLink" style="display:none;">Tải file kết quả</a>
+
+  <script>
+    function processFile() {
+      const mode = document.getElementById("mode").value;
+      const file = document.getElementById("fileInput").files[0];
+      const password = document.getElementById("keyInput").value;
+
+      if (!file || !password) return alert("Vui lòng chọn file và nhập khóa!");
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const content = e.target.result;
+        let result;
+
+        if (mode === "encrypt") {
+          const encrypted = CryptoJS.AES.encrypt(content, password).toString();
+          download(encrypted, file.name + ".enc");
+        } else {
+          try {
+            const decrypted = CryptoJS.AES.decrypt(content, password).toString(CryptoJS.enc.Utf8);
+            if (!decrypted) throw "Sai khóa hoặc file không hợp lệ!";
+            download(decrypted, file.name.replace(".enc", ".dec"));
+          } catch (e) {
+            alert("Giải mã thất bại: " + e);
+          }
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function download(data, filename) {
+      const blob = new Blob([data]);
+      const url = URL.createObjectURL(blob);
+      const link = document.getElementById("downloadLink");
+      link.href = url;
+      link.download = filename;
+      link.style.display = "block";
+      link.textContent = "Tải " + filename;
+    }
+  </script>
+</body>
+</html>
