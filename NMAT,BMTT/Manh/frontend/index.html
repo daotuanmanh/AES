@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>File Transfer with Integrity Check</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    input[type=file] {
+      display: block;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+    button {
+      background-color: #007bff;
+      border: none;
+      color: white;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .file-list {
+      margin-top: 20px;
+    }
+    .file-list a {
+      text-decoration: none;
+      color: #007bff;
+    }
+    .status {
+      margin-bottom: 20px;
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Upload File</h1>
+  <input type="file" id="fileInput" />
+  <button id="uploadBtn">Upload to Server</button>
+  <div class="status" id="status"></div>
+  <h2>Available Files</h2>
+  <div class="file-list" id="fileList"></div>
+
+<script>
+  const uploadBtn = document.getElementById('uploadBtn');
+  const fileInput = document.getElementById('fileInput');
+  const statusDiv = document.getElementById('status');
+  const fileListDiv = document.getElementById('fileList');
+
+  // Tính SHA-256 bằng Web Crypto API
+  async function sha256(buffer) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function uploadFile() {
+    if (!fileInput.files.length) {
+      alert('Please select a file first.');
+      return;
+    }
+    const file = fileInput.files[0];
+    statusDiv.style.color = 'black';
+    statusDiv.textContent = 'Calculating SHA-256...';
+
+    const arrayBuffer = await file.arrayBuffer();
+    const hash = await sha256(arrayBuffer);
+    statusDiv.textContent = `SHA-256: ${hash}`;
+
+    // Upload file qua HTTP POST tới backend Flask
+    const formData = new FormData();
+    formData.append('file', file);
+
+    statusDiv.textContent = 'Uploading file...';
+    try {
+      const res = await fetch('http://localhost:5000/upload', {
+        method: 'POST',
+        body: formData
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const serverHash = await res.text();
+
+      if (serverHash === hash) {
+        statusDiv.style.color = 'green';
+        statusDiv.textContent = 'Upload thành công và kiểm tra hash trùng khớp!';
+      } else {
+        statusDiv.style.color = 'red';
+        statusDiv.textContent = 'Upload thành công nhưng hash không khớp!';
+      }
+      loadFileList();
+    } catch (err) {
+      statusDiv.style.color = 'red';
+      statusDiv.textContent = 'Upload thất bại: ' + err.message;
+    }
+  }
+
+  async function loadFileList() {
+    try {
+      const res = await fetch('http://localhost:5000/files');
+      if (!res.ok) throw new Error('Cannot load files list');
+      const files = await res.json();
+      fileListDiv.innerHTML = '';
+      for (const [filename, filehash] of Object.entries(files)) {
+        const a = document.createElement('a');
+        a.href = `http://localhost:5000/download/${encodeURIComponent(filename)}`;
+        a.textContent = `${filename} - SHA256: ${filehash}`;
+        a.target = '_blank';
+        fileListDiv.appendChild(a);
+        fileListDiv.appendChild(document.createElement('br'));
+      }
+    } catch (err) {
+      fileListDiv.textContent = 'Lỗi khi tải danh sách file.';
+    }
+  }
+
+  uploadBtn.addEventListener('click', uploadFile);
+  loadFileList();
+</script>
+</body>
+</html>

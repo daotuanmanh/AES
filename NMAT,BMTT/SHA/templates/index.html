@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Truyền File An Toàn - SHA-256</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="container">
+        <h1>Truyền File An Toàn - SHA-256</h1>
+
+        <label class="switch">
+            <input type="checkbox" id="toggle-darkmode" />
+            <span class="slider round"></span>
+        </label>
+        <span>Chế độ Dark Mode</span>
+
+        <form id="upload-form" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" id="file-input" required />
+            <button type="submit">Gửi file</button>
+        </form>
+
+        <div id="progress-wrapper" hidden>
+            <progress id="upload-progress" max="100" value="0"></progress>
+            <span id="progress-text">0%</span>
+        </div>
+
+        <div id="toast" class="toast"></div>
+
+        <hr />
+
+        <h2>File đã nhận</h2>
+        <ul id="received-files">
+            {% for f in files %}
+            <li><a href="{{ url_for('download_file', filename=f) }}" download>{{ f }}</a></li>
+            {% else %}
+            <li>Chưa có file nào.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
